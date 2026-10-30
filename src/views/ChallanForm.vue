@@ -155,11 +155,20 @@ function itemOptionLabel(item) {
 
 function onItemSelect(line, item) {
   if (!item) return
+  const prevDesc = line.itemOption?.description || ''
+  const current = (line.description || '').trim()
+  // Fill description only when empty or still the previous item's text —
+  // keep manual values like TOP / BOTTOM / DOOR.
+  const shouldFillDescription = !current || current === prevDesc
+
   line.itemId = item._id || ''
   line.itemOption = item
-  // Selecting an item always fills description; user can still edit afterward
-  line.description = item.description || ''
-  line.unit = item.unit || line.unit || 'Nos'
+  if (shouldFillDescription) {
+    line.description = item.description || ''
+  }
+  if (!line.unit?.trim() || line.unit === 'Nos') {
+    line.unit = item.unit || 'Nos'
+  }
 }
 
 async function loadChallan() {
