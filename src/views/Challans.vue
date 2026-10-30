@@ -17,6 +17,7 @@
     <table>
       <thead>
         <tr>
+          <th>Company</th>
           <th>No.</th>
           <th>Date</th>
           <th>Customer</th>
@@ -26,7 +27,8 @@
       </thead>
       <tbody>
         <tr v-for="c in challans" :key="c._id">
-          <td>{{ c.challanNo }}</td>
+          <td>{{ c.company?.code || '—' }}</td>
+          <td>{{ formatChallanNo(c.company?.code, c.challanNo) }}</td>
           <td>{{ formatDate(c.date) }}</td>
           <td>{{ c.customer?.name || '—' }}</td>
           <td>{{ c.lines?.length || 0 }}</td>
@@ -47,6 +49,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { downloadPdf, request } from '../api/http'
+import { formatChallanNo } from '../utils/challanNo'
 
 const PAGE_SIZE = 30
 
@@ -99,7 +102,10 @@ function onSearchInput() {
 
 async function download(c) {
   try {
-    await downloadPdf(`/api/challans/${c._id}/pdf`, `delivery-challan-${c.challanNo}.pdf`)
+    await downloadPdf(
+      `/api/challans/${c._id}/pdf`,
+      `delivery-challan-${formatChallanNo(c.company?.code, c.challanNo).replaceAll('/', '-')}.pdf`,
+    )
   } catch (e) {
     error.value = e.message
   }

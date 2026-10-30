@@ -7,3 +7,10 @@ dist/
 !.env.example
 !.env.production
 !.env.production.example
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+*.apk
+*.aab
+

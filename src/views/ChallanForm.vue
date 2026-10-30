@@ -1,9 +1,23 @@
 <template>
   <div class="card">
-    <h1>{{ isEdit ? `Edit Challan #${form.challanNo || ''}` : 'New Delivery Challan' }}</h1>
+    <h1>{{ isEdit ? `Edit Challan ${challanNoDisplay}` : 'New Delivery Challan' }}</h1>
     <p v-if="error" class="error">{{ error }}</p>
 
     <div class="grid-2">
+      <div class="field">
+        <label class="label">Company *</label>
+        <select
+          v-model="form.company"
+          class="select w-full min-w-0"
+          :disabled="isEdit"
+          @change="onCompanyChange"
+        >
+          <option value="" disabled>Select company</option>
+          <option v-for="c in companies" :key="c.id || c._id" :value="c.id || c._id">
+            {{ c.code }} — {{ c.name }}
+          </option>
+        </select>
+      </div>
       <div class="field">
         <label class="label">Challan No.</label>
         <input
@@ -12,7 +26,9 @@
           readonly
           tabindex="-1"
         />
-        <p v-if="!isEdit" class="empty mt-1 text-xs">Number is auto-generated on save</p>
+        <p v-if="!isEdit" class="empty mt-1 text-xs">
+          Auto number for selected company (next on save)
+        </p>
       </div>
       <div class="field">
         <label class="label">Date *</label>
@@ -95,16 +111,19 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import { downloadPdf, request } from '../api/http'
+import { formatChallanNo } from '../utils/challanNo'
 
 const route = useRoute()
 const router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const selectedCustomer = ref(null)
+const companies = ref([])
 const nextChallanNo = ref(null)
 const error = ref('')
 const saving = ref(false)
 
 const form = reactive({
+  company: '',
   challanNo: '',
   customer: '',
   date: new Date().toISOString().slice(0, 10),
@@ -115,10 +134,17 @@ const form = reactive({
   lines: [emptyLine()],
 })
 
+const selectedCompanyCode = computed(() => {
+  const c = companies.value.find((x) => String(x.id || x._id) === String(form.company))
+  return c?.code || ''
+})
+
 const challanNoDisplay = computed(() => {
-  if (isEdit.value && form.challanNo !== '') return String(form.challanNo)
-  if (nextChallanNo.value != null) return String(nextChallanNo.value)
-  return 'Auto'
+  const no = isEdit.value && form.challanNo !== ''
+    ? form.challanNo
+    : nextChallanNo.value
+  if (!selectedCompanyCode.value && (no == null || no === '')) return 'Auto'
+  return formatChallanNo(selectedCompanyCode.value, no)
 })
 
 function emptyLine() {
@@ -179,10 +205,32 @@ function onItemSelect(line, item) {
   }
 }
 
+async function loadCompanies() {
+  const data = await request('/api/company?active=1')
+  companies.value = data.items || []
+  if (!isEdit.value && !form.company && companies.value.length) {
+    form.company = companies.value[0].id || companies.value[0]._id
+  }
+}
+
+async function onCompanyChange() {
+  nextChallanNo.value = null
+  await loadNextNumber()
+}
+
 async function loadChallan() {
   if (!isEdit.value) return
   const c = await request(`/api/challans/${route.params.id}`)
   form.challanNo = c.challanNo
+  form.company = c.company?._id || c.company?.id || c.company || ''
+  if (c.company && typeof c.company === 'object' && !companies.value.find((x) => String(x.id || x._id) === String(form.company))) {
+    companies.value = [...companies.value, {
+      id: c.company._id,
+      _id: c.company._id,
+      code: c.company.code,
+      name: c.company.name,
+    }]
+  }
   form.customer = c.customer?._id || c.customer || ''
   selectedCustomer.value = c.customer && typeof c.customer === 'object' ? c.customer : null
   form.date = c.date ? new Date(c.date).toISOString().slice(0, 10) : ''
@@ -211,6 +259,7 @@ async function save() {
   error.value = ''
   try {
     const payload = {
+      company: form.company,
       customer: form.customer,
       date: form.date,
       partyDcNo: form.partyDcNo,
@@ -227,6 +276,7 @@ async function save() {
           unit: l.unit || 'Nos',
         })),
     }
+    if (!payload.company) throw new Error('Company is required')
     if (!payload.customer || !payload.date) throw new Error('Customer and date are required')
     if (!payload.lines.length) throw new Error('Add at least one line item')
     if (payload.lines.some((l) => !l.itemId)) {
@@ -258,7 +308,7 @@ async function download() {
   try {
     await downloadPdf(
       `/api/challans/${route.params.id}/pdf`,
-      `delivery-challan-${form.challanNo || 'draft'}.pdf`,
+      `delivery-challan-${String(challanNoDisplay.value).replaceAll('/', '-') || 'draft'}.pdf`,
     )
   } catch (e) {
     error.value = e.message
@@ -267,12 +317,17 @@ async function download() {
 
 async function loadNextNumber() {
   if (isEdit.value) return
-  const data = await request('/api/challans/next-number')
+  if (!form.company) {
+    nextChallanNo.value = null
+    return
+  }
+  const data = await request(`/api/challans/next-number?company=${encodeURIComponent(form.company)}`)
   nextChallanNo.value = data.challanNo
 }
 
 onMounted(async () => {
   try {
+    await loadCompanies()
     await Promise.all([loadNextNumber(), loadChallan()])
   } catch (e) {
     error.value = e.message

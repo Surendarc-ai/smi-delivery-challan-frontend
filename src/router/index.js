@@ -8,6 +8,7 @@ import Challans from '../views/Challans.vue'
 import ChallanForm from '../views/ChallanForm.vue'
 import Company from '../views/Company.vue'
 import PdfFormat from '../views/PdfFormat.vue'
+import Reports from '../views/Reports.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -25,6 +26,7 @@ const router = createRouter({
         { path: 'challans/:id', name: 'ChallanEdit', component: ChallanForm },
         { path: 'company', name: 'Company', component: Company },
         { path: 'pdf-format', name: 'PdfFormat', component: PdfFormat },
+        { path: 'reports', name: 'Reports', component: Reports },
       ],
     },
   ],

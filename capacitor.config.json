@@ -1,0 +1,8 @@
+{
+  "appId": "com.surendarc.deliverychallan",
+  "appName": "Delivery Challan",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
