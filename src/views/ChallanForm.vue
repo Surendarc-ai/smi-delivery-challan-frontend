@@ -100,7 +100,7 @@
 
     <div class="actions mt-5">
       <button class="btn" :disabled="saving" @click="save">{{ saving ? 'Saving...' : 'Save' }}</button>
-      <button v-if="isEdit" class="btn secondary" type="button" @click="download">Download PDF</button>
+      <button v-if="isEdit" class="btn secondary" type="button" @click="download">View PDF</button>
       <router-link class="btn secondary" to="/challans">Cancel</router-link>
     </div>
   </div>
@@ -153,6 +153,7 @@ function emptyLine() {
     itemName: '',
     itemOption: null,
     description: '',
+    hsnCode: '',
     quantity: '',
     unit: 'Nos',
   }
@@ -197,6 +198,7 @@ function onItemSelect(line, item) {
   line.itemId = item._id || ''
   line.itemName = item.description || ''
   line.itemOption = item
+  line.hsnCode = item.hsnCode || ''
   if (shouldFillDescription) {
     line.description = item.description || ''
   }
@@ -245,8 +247,11 @@ async function loadChallan() {
     return {
       itemId,
       itemName,
-      itemOption: item || (itemId && itemName ? { _id: itemId, description: itemName, unit: l.unit } : null),
+      itemOption: item || (itemId && itemName
+        ? { _id: itemId, description: itemName, unit: l.unit, hsnCode: l.hsnCode || item?.hsnCode || '' }
+        : null),
       description: l.description || '',
+      hsnCode: l.hsnCode || item?.hsnCode || '',
       quantity: l.quantity,
       unit: l.unit || 'Nos',
     }
@@ -272,6 +277,7 @@ async function save() {
           itemId: l.itemId || null,
           itemName: l.itemName || l.itemOption?.description || '',
           description: (l.description || l.itemName || l.itemOption?.description || '').trim(),
+          hsnCode: l.hsnCode || l.itemOption?.hsnCode || '',
           quantity: Number(l.quantity) || 0,
           unit: l.unit || 'Nos',
         })),
@@ -289,14 +295,12 @@ async function save() {
         body: JSON.stringify(payload),
       })
     } else {
-      const created = await request('/api/challans', {
+      await request('/api/challans', {
         method: 'POST',
         body: JSON.stringify(payload),
       })
-      router.replace(`/challans/${created._id}`)
-      return
     }
-    router.push('/challans')
+    router.push('/')
   } catch (e) {
     error.value = e.message
   } finally {

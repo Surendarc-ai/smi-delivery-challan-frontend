@@ -48,7 +48,19 @@ export function assetUrl(path) {
   return `${BASE}${path}`
 }
 
-export async function downloadPdf(path, filename) {
+async function blobToBase64(blob) {
+  const buffer = await blob.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
+
+/** Fetch PDF and open for viewing (native system viewer / browser tab). */
+export async function downloadPdf(path, filename = 'delivery-challan.pdf') {
   const token = getToken()
   const url = path.startsWith('http') ? path : `${BASE}${path}`
   const res = await fetch(url, {
@@ -56,12 +68,38 @@ export async function downloadPdf(path, filename) {
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
-    throw new Error(data.error || 'Failed to download PDF')
+    throw new Error(data.error || 'Failed to open PDF')
   }
   const blob = await res.blob()
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(a.href)
+  const safeName = String(filename || 'delivery-challan.pdf').replace(/[^\w.\-]+/g, '_')
+
+  const { Capacitor } = await import('@capacitor/core')
+  if (Capacitor.isNativePlatform()) {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem')
+    const { FileOpener } = await import('@capacitor-community/file-opener')
+    const base64 = await blobToBase64(blob)
+    const written = await Filesystem.writeFile({
+      path: `pdfs/${safeName}`,
+      data: base64,
+      directory: Directory.Cache,
+      recursive: true,
+    })
+    await FileOpener.open({
+      filePath: written.uri,
+      contentType: 'application/pdf',
+      openWithDefault: true,
+    })
+    return
+  }
+
+  const objectUrl = URL.createObjectURL(blob)
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer')
+  if (!opened) {
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
+  }
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
 }

@@ -55,6 +55,7 @@
             <tr>
               <th>Item Name</th>
               <th>Customer</th>
+              <th>DC No</th>
               <th>Qty</th>
             </tr>
           </thead>
@@ -62,12 +63,13 @@
             <tr v-for="(row, idx) in report.rows" :key="idx">
               <td>{{ row.itemName }}</td>
               <td>{{ row.customer }}</td>
+              <td>{{ row.dcNo }}</td>
               <td>{{ formatQty(row.qty, row.unit) }}</td>
             </tr>
           </tbody>
           <tfoot v-if="report.rows.length">
             <tr>
-              <td colspan="2" class="font-semibold text-right">Total</td>
+              <td colspan="3" class="font-semibold text-right">Total</td>
               <td class="font-semibold">{{ formatQty(report.totalQty) }}</td>
             </tr>
           </tfoot>

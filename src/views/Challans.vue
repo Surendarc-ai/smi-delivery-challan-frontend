@@ -22,6 +22,7 @@
           <th>Date</th>
           <th>Customer</th>
           <th>Lines</th>
+          <th>Billed</th>
           <th></th>
         </tr>
       </thead>
@@ -32,8 +33,18 @@
           <td>{{ formatDate(c.date) }}</td>
           <td>{{ c.customer?.name || '—' }}</td>
           <td>{{ c.lines?.length || 0 }}</td>
+          <td>
+            <input
+              type="checkbox"
+              class="align-middle"
+              :checked="Boolean(c.billed)"
+              :disabled="savingBilledId === c._id"
+              :aria-label="`Mark challan ${formatChallanNo(c.company?.code, c.challanNo)} billed`"
+              @change="toggleBilled(c, $event)"
+            />
+          </td>
           <td class="actions">
-            <button type="button" class="btn secondary" @click="download(c)">PDF</button>
+            <button type="button" class="btn secondary" @click="download(c)">View PDF</button>
             <router-link class="btn secondary" :to="`/challans/${c._id}`">Edit</router-link>
             <button type="button" class="btn danger" @click="remove(c._id)">Delete</button>
           </td>
@@ -57,6 +68,7 @@ const challans = ref([])
 const search = ref('')
 const error = ref('')
 const loading = ref(false)
+const savingBilledId = ref('')
 const total = ref(0)
 const hasMore = ref(true)
 const sentinel = ref(null)
@@ -108,6 +120,26 @@ async function download(c) {
     )
   } catch (e) {
     error.value = e.message
+  }
+}
+
+async function toggleBilled(c, event) {
+  const billed = Boolean(event?.target?.checked)
+  const prev = Boolean(c.billed)
+  c.billed = billed
+  savingBilledId.value = c._id
+  error.value = ''
+  try {
+    await request(`/api/challans/${c._id}/billed`, {
+      method: 'PATCH',
+      body: JSON.stringify({ billed }),
+    })
+  } catch (e) {
+    c.billed = prev
+    if (event?.target) event.target.checked = prev
+    error.value = e.message
+  } finally {
+    savingBilledId.value = ''
   }
 }
 
