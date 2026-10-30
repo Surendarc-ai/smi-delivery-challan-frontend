@@ -122,7 +122,14 @@ const challanNoDisplay = computed(() => {
 })
 
 function emptyLine() {
-  return { itemId: '', itemOption: null, description: '', quantity: '', unit: 'Nos' }
+  return {
+    itemId: '',
+    itemName: '',
+    itemOption: null,
+    description: '',
+    quantity: '',
+    unit: 'Nos',
+  }
 }
 
 function addLine() {
@@ -155,13 +162,14 @@ function itemOptionLabel(item) {
 
 function onItemSelect(line, item) {
   if (!item) return
-  const prevDesc = line.itemOption?.description || ''
+  const prevItemName = line.itemName || line.itemOption?.description || ''
   const current = (line.description || '').trim()
   // Fill description only when empty or still the previous item's text —
   // keep manual values like TOP / BOTTOM / DOOR.
-  const shouldFillDescription = !current || current === prevDesc
+  const shouldFillDescription = !current || current === prevItemName
 
   line.itemId = item._id || ''
+  line.itemName = item.description || ''
   line.itemOption = item
   if (shouldFillDescription) {
     line.description = item.description || ''
@@ -184,9 +192,12 @@ async function loadChallan() {
   form.notes = c.notes || ''
   form.lines = (c.lines || []).map((l) => {
     const item = l.item && typeof l.item === 'object' ? l.item : null
+    const itemId = String(item?._id || l.item || '')
+    const itemName = item?.description || l.itemName || ''
     return {
-      itemId: item?._id || l.item || '',
-      itemOption: item,
+      itemId,
+      itemName,
+      itemOption: item || (itemId && itemName ? { _id: itemId, description: itemName, unit: l.unit } : null),
       description: l.description || '',
       quantity: l.quantity,
       unit: l.unit || 'Nos',
@@ -207,16 +218,20 @@ async function save() {
       partyGstin: form.partyGstin,
       notes: form.notes,
       lines: form.lines
-        .filter((l) => l.description?.trim())
+        .filter((l) => l.itemId || l.description?.trim() || l.itemName?.trim())
         .map((l) => ({
           itemId: l.itemId || null,
-          description: l.description.trim(),
+          itemName: l.itemName || l.itemOption?.description || '',
+          description: (l.description || l.itemName || l.itemOption?.description || '').trim(),
           quantity: Number(l.quantity) || 0,
           unit: l.unit || 'Nos',
         })),
     }
     if (!payload.customer || !payload.date) throw new Error('Customer and date are required')
     if (!payload.lines.length) throw new Error('Add at least one line item')
+    if (payload.lines.some((l) => !l.itemId)) {
+      throw new Error('Select an item for each line')
+    }
 
     if (isEdit.value) {
       await request(`/api/challans/${route.params.id}`, {

@@ -21,7 +21,8 @@
             <th>Name</th>
             <th>GSTIN</th>
             <th>Phone</th>
-            <th>Address</th>
+            <th>Bill To</th>
+            <th>Ship To</th>
             <th></th>
           </tr>
         </thead>
@@ -31,6 +32,13 @@
             <td>{{ c.gstin || '—' }}</td>
             <td>{{ c.phone || '—' }}</td>
             <td>{{ c.address || '—' }}</td>
+            <td>
+              {{
+                c.shippingSameAsBilling === true
+                  ? (c.address ? 'Same as bill' : '—')
+                  : (c.shippingAddress || '—')
+              }}
+            </td>
             <td class="actions">
               <button type="button" class="btn secondary" @click="openForm(c)">Edit</button>
               <button type="button" class="btn danger" @click="remove(c._id)">Delete</button>
@@ -68,8 +76,26 @@
         </div>
       </div>
       <div class="field">
-        <label class="label">Address</label>
+        <label class="label">Bill To Address</label>
         <textarea v-model="form.address" class="input min-h-[70px]" />
+      </div>
+      <label class="flex items-center gap-2 mb-3 text-sm text-slate-700 cursor-pointer select-none">
+        <input
+          v-model="form.shippingSameAsBilling"
+          type="checkbox"
+          class="rounded border-slate-300"
+          @change="onSameAsBillChange"
+        />
+        Ship To same as Bill To
+      </label>
+      <div class="field">
+        <label class="label">Ship To Address</label>
+        <textarea
+          v-model="form.shippingAddress"
+          class="input min-h-[70px]"
+          :disabled="form.shippingSameAsBilling"
+          :class="{ 'bg-slate-50 text-slate-500': form.shippingSameAsBilling }"
+        />
       </div>
       <p v-if="formError" class="error mb-3">{{ formError }}</p>
       <div class="actions">
@@ -99,7 +125,15 @@ const loading = ref(false)
 const total = ref(0)
 const hasMore = ref(true)
 const sentinel = ref(null)
-const form = reactive({ name: '', gstin: '', phone: '', email: '', address: '' })
+const form = reactive({
+  name: '',
+  gstin: '',
+  phone: '',
+  email: '',
+  address: '',
+  shippingSameAsBilling: false,
+  shippingAddress: '',
+})
 
 let searchTimer = null
 let observer = null
@@ -134,6 +168,12 @@ function onSearchInput() {
   }, 250)
 }
 
+function onSameAsBillChange() {
+  if (form.shippingSameAsBilling) {
+    form.shippingAddress = form.address
+  }
+}
+
 function openForm(c = null) {
   editingId.value = c?._id || null
   form.name = c?.name || ''
@@ -141,6 +181,10 @@ function openForm(c = null) {
   form.phone = c?.phone || ''
   form.email = c?.email || ''
   form.address = c?.address || ''
+  form.shippingSameAsBilling = c?.shippingSameAsBilling === true
+  form.shippingAddress = form.shippingSameAsBilling
+    ? (c?.address || '')
+    : (c?.shippingAddress || '')
   formError.value = ''
   showForm.value = true
 }

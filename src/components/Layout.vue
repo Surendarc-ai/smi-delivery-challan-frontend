@@ -23,6 +23,10 @@
           <FileText :size="18" class="shrink-0" />
           <span>Challans</span>
         </router-link>
+        <router-link to="/pdf-format" class="nav-link" title="PDF Format">
+          <Settings2 :size="18" class="shrink-0" />
+          <span>PDF Format</span>
+        </router-link>
       </nav>
 
       <div class="mt-auto px-2 pt-4 border-t border-slate-700">
@@ -44,7 +48,7 @@
 </template>
 
 <script setup>
-import { Truck, FileText, Users, Package, Building2, LogOut } from '@lucide/vue'
+import { Truck, FileText, Users, Package, Building2, Settings2, LogOut } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { setToken } from '../api/http'
 
