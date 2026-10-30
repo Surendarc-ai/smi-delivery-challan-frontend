@@ -27,6 +27,27 @@ export async function request(path, options = {}) {
   return data
 }
 
+export async function uploadRequest(path, formData, method = 'PUT') {
+  const token = getToken()
+  const url = path.startsWith('http') ? path : `${BASE}${path}`
+  const res = await fetch(url, {
+    method,
+    body: formData,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || res.statusText)
+  return data
+}
+
+export function assetUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return `${BASE}${path}`
+}
+
 export async function downloadPdf(path, filename) {
   const token = getToken()
   const url = path.startsWith('http') ? path : `${BASE}${path}`

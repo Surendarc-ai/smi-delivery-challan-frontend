@@ -1,24 +1,30 @@
 <template>
   <div class="login-wrap">
-    <div class="card login-card">
-      <h1>Delivery Challan</h1>
-      <p class="empty" style="margin-top:-8px">Sign in to continue</p>
+    <div class="login-card">
+      <h1 class="text-2xl font-semibold text-slate-800 mb-2">Delivery Challan</h1>
+      <p class="empty mb-6">Sign in to continue</p>
       <form @submit.prevent="submit">
         <div class="field">
           <label class="label">Username</label>
-          <input v-model="username" class="input" style="width:100%" required />
+          <input v-model="username" class="input" required autocomplete="username" />
         </div>
         <div class="field">
           <label class="label">Password</label>
-          <input v-model="password" type="password" class="input" style="width:100%" required />
+          <input
+            v-model="password"
+            type="password"
+            class="input"
+            required
+            autocomplete="current-password"
+          />
         </div>
-        <p v-if="error" class="error">{{ error }}</p>
-        <div class="actions">
-          <button class="btn" type="submit" :disabled="saving">{{ mode === 'login' ? 'Login' : 'Register' }}</button>
-          <button class="btn secondary" type="button" @click="toggleMode">
-            {{ mode === 'login' ? 'Create account' : 'Have account? Login' }}
-          </button>
-        </div>
+        <p v-if="error" class="error mb-3">{{ error }}</p>
+        <button class="btn w-full" type="submit" :disabled="saving">
+          {{ mode === 'login' ? 'Login' : 'Register' }}
+        </button>
+        <button class="btn secondary w-full mt-2" type="button" @click="toggleMode">
+          {{ mode === 'login' ? 'Create account' : 'Have account? Login' }}
+        </button>
       </form>
     </div>
   </div>

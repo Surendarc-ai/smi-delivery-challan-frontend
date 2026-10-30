@@ -6,6 +6,7 @@ import Customers from '../views/Customers.vue'
 import Items from '../views/Items.vue'
 import Challans from '../views/Challans.vue'
 import ChallanForm from '../views/ChallanForm.vue'
+import Company from '../views/Company.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,6 +22,7 @@ const router = createRouter({
         { path: 'challans', name: 'Challans', component: Challans },
         { path: 'challans/new', name: 'ChallanNew', component: ChallanForm },
         { path: 'challans/:id', name: 'ChallanEdit', component: ChallanForm },
+        { path: 'company', name: 'Company', component: Company },
       ],
     },
   ],
