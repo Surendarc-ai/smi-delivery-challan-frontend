@@ -45,16 +45,28 @@
     </div>
 
     <h2 class="text-[15px] font-semibold mt-[18px] mb-2.5 text-slate-800">Line items</h2>
+    <div class="line-row line-row-head hidden md:grid">
+      <span class="label mb-0">Item</span>
+      <span class="label mb-0">Description</span>
+      <span class="label mb-0">Qty</span>
+      <span class="label mb-0">Unit</span>
+      <span></span>
+    </div>
     <div v-for="(line, idx) in form.lines" :key="idx" class="line-row">
       <SearchableSelect
         v-model="line.itemId"
-        placeholder="Custom / pick item"
+        placeholder="Select item"
         search-placeholder="Search items..."
         :load-options="loadItems"
         :option-label="itemOptionLabel"
+        :initial-option="line.itemOption"
         @select="(item) => onItemSelect(line, item)"
       />
-      <input v-model="line.description" class="input" placeholder="Description" />
+      <input
+        v-model="line.description"
+        class="input"
+        placeholder="Description (editable)"
+      />
       <input v-model="line.quantity" type="number" min="0" step="1" class="input" placeholder="Qty" />
       <input v-model="line.unit" class="input" placeholder="Nos" />
       <button class="btn danger" type="button" @click="form.lines.splice(idx, 1)">×</button>
@@ -100,7 +112,7 @@ const form = reactive({
   partyDcDate: '',
   partyGstin: '',
   notes: '',
-  lines: [{ itemId: '', description: '', quantity: '', unit: 'Nos' }],
+  lines: [emptyLine()],
 })
 
 const challanNoDisplay = computed(() => {
@@ -109,8 +121,12 @@ const challanNoDisplay = computed(() => {
   return 'Auto'
 })
 
+function emptyLine() {
+  return { itemId: '', itemOption: null, description: '', quantity: '', unit: 'Nos' }
+}
+
 function addLine() {
-  form.lines.push({ itemId: '', description: '', quantity: '', unit: 'Nos' })
+  form.lines.push(emptyLine())
 }
 
 async function loadCustomers({ search, skip, limit }) {
@@ -139,7 +155,10 @@ function itemOptionLabel(item) {
 
 function onItemSelect(line, item) {
   if (!item) return
-  line.description = item.description || line.description
+  line.itemId = item._id || ''
+  line.itemOption = item
+  // Selecting an item always fills description; user can still edit afterward
+  line.description = item.description || ''
   line.unit = item.unit || line.unit || 'Nos'
 }
 
@@ -154,12 +173,16 @@ async function loadChallan() {
   form.partyDcDate = c.partyDcDate ? new Date(c.partyDcDate).toISOString().slice(0, 10) : ''
   form.partyGstin = c.partyGstin || ''
   form.notes = c.notes || ''
-  form.lines = (c.lines || []).map((l) => ({
-    itemId: '',
-    description: l.description,
-    quantity: l.quantity,
-    unit: l.unit || 'Nos',
-  }))
+  form.lines = (c.lines || []).map((l) => {
+    const item = l.item && typeof l.item === 'object' ? l.item : null
+    return {
+      itemId: item?._id || l.item || '',
+      itemOption: item,
+      description: l.description || '',
+      quantity: l.quantity,
+      unit: l.unit || 'Nos',
+    }
+  })
   if (!form.lines.length) addLine()
 }
 
@@ -177,7 +200,8 @@ async function save() {
       lines: form.lines
         .filter((l) => l.description?.trim())
         .map((l) => ({
-          description: l.description,
+          itemId: l.itemId || null,
+          description: l.description.trim(),
           quantity: Number(l.quantity) || 0,
           unit: l.unit || 'Nos',
         })),

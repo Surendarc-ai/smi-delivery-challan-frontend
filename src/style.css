@@ -125,7 +125,11 @@
   }
 
   .line-row {
-    @apply grid grid-cols-1 md:grid-cols-[180px_1fr_100px_80px_40px] gap-2 mb-2 items-center;
+    @apply grid grid-cols-1 md:grid-cols-[minmax(200px,0.9fr)_minmax(220px,1.4fr)_90px_80px_40px] gap-2 mb-2 items-center;
+  }
+
+  .line-row-head {
+    @apply mb-1;
   }
 
   .login-wrap {
