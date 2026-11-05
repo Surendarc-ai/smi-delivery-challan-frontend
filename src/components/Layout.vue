@@ -8,8 +8,8 @@
     />
 
     <aside
-      class="fixed md:static z-50 h-screen shrink-0 w-56 bg-slate-800 text-slate-200 flex flex-col py-4 transition-transform duration-200 md:translate-x-0"
-      :class="menuOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="fixed left-0 top-0 md:static z-50 h-screen shrink-0 w-56 max-w-[80vw] bg-slate-800 text-slate-200 flex flex-col py-4 transition-transform duration-200 md:translate-x-0"
+      :class="menuOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none md:pointer-events-auto'"
     >
       <div class="flex items-center gap-2 px-4 text-xl font-bold border-b border-slate-700 mb-4 pb-4">
         <Truck :size="22" class="text-blue-400 shrink-0" />
@@ -55,7 +55,7 @@
       </div>
     </aside>
 
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="flex-1 flex flex-col min-w-0 w-full max-w-full">
       <header class="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-800 text-slate-100 shrink-0">
         <button
           type="button"
@@ -68,7 +68,7 @@
         <span class="font-semibold">Delivery Challan</span>
       </header>
 
-      <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100">
+      <main class="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 bg-slate-100 w-full max-w-full">
         <router-view />
       </main>
     </div>

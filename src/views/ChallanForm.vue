@@ -65,7 +65,8 @@
       <span class="label mb-0">Item</span>
       <span class="label mb-0">Description</span>
       <span class="label mb-0">Qty</span>
-      <span class="label mb-0">Unit</span>
+      <span class="label mb-0">Rate</span>
+      <span class="label mb-0">Amount</span>
       <span></span>
     </div>
     <div v-for="(line, idx) in form.lines" :key="idx" class="line-row">
@@ -83,11 +84,37 @@
         class="input"
         placeholder="Description (editable)"
       />
-      <input v-model="line.quantity" type="number" min="0" step="1" class="input" placeholder="Qty" />
-      <input v-model="line.unit" class="input" placeholder="Nos" />
+      <input
+        v-model="line.quantity"
+        type="number"
+        min="0"
+        step="1"
+        class="input"
+        placeholder="Qty"
+        @input="recalcLineAmount(line)"
+      />
+      <input
+        v-model="line.rate"
+        type="number"
+        min="0"
+        step="0.01"
+        class="input"
+        placeholder="Rate"
+        @input="recalcLineAmount(line)"
+      />
+      <input
+        class="input bg-slate-50"
+        :value="lineAmountDisplay(line)"
+        readonly
+        tabindex="-1"
+        placeholder="Amount"
+      />
       <button class="btn danger" type="button" @click="form.lines.splice(idx, 1)">×</button>
     </div>
-    <button class="btn secondary" type="button" @click="addLine">+ Add line</button>
+    <div class="flex justify-between items-center gap-3 mt-1 mb-2">
+      <button class="btn secondary" type="button" @click="addLine">+ Add line</button>
+      <p class="m-0 text-sm font-semibold text-slate-700">Total: {{ totalAmountDisplay }}</p>
+    </div>
 
     <div class="field mt-5">
       <label class="label">Summary</label>
@@ -155,9 +182,31 @@ function emptyLine() {
     description: '',
     hsnCode: '',
     quantity: '',
+    rate: '',
+    amount: 0,
     unit: 'Nos',
   }
 }
+
+function lineAmount(line) {
+  const qty = Number(line?.quantity) || 0
+  const rate = Number(line?.rate) || 0
+  return Math.round(qty * rate * 100) / 100
+}
+
+function lineAmountDisplay(line) {
+  const n = lineAmount(line)
+  return Number.isInteger(n) ? String(n) : n.toFixed(2)
+}
+
+function recalcLineAmount(line) {
+  line.amount = lineAmount(line)
+}
+
+const totalAmountDisplay = computed(() => {
+  const total = form.lines.reduce((sum, line) => sum + lineAmount(line), 0)
+  return Number.isInteger(total) ? String(total) : total.toFixed(2)
+})
 
 function addLine() {
   form.lines.push(emptyLine())
@@ -189,22 +238,15 @@ function itemOptionLabel(item) {
 
 function onItemSelect(line, item) {
   if (!item) return
-  const prevItemName = line.itemName || line.itemOption?.description || ''
-  const current = (line.description || '').trim()
-  // Fill description only when empty or still the previous item's text —
-  // keep manual values like TOP / BOTTOM / DOOR.
-  const shouldFillDescription = !current || current === prevItemName
-
   line.itemId = item._id || ''
   line.itemName = item.description || ''
   line.itemOption = item
   line.hsnCode = item.hsnCode || ''
-  if (shouldFillDescription) {
-    line.description = item.description || ''
-  }
+  line.rate = item.rate != null && item.rate !== '' ? item.rate : ''
   if (!line.unit?.trim() || line.unit === 'Nos') {
     line.unit = item.unit || 'Nos'
   }
+  recalcLineAmount(line)
 }
 
 async function loadCompanies() {
@@ -244,15 +286,28 @@ async function loadChallan() {
     const item = l.item && typeof l.item === 'object' ? l.item : null
     const itemId = String(item?._id || l.item || '')
     const itemName = item?.description || l.itemName || ''
+    const rate = l.rate != null ? l.rate : (item?.rate ?? '')
+    const quantity = l.quantity
+    const amount = l.amount != null
+      ? l.amount
+      : Math.round((Number(quantity) || 0) * (Number(rate) || 0) * 100) / 100
     return {
       itemId,
       itemName,
       itemOption: item || (itemId && itemName
-        ? { _id: itemId, description: itemName, unit: l.unit, hsnCode: l.hsnCode || item?.hsnCode || '' }
+        ? {
+          _id: itemId,
+          description: itemName,
+          unit: l.unit,
+          hsnCode: l.hsnCode || item?.hsnCode || '',
+          rate,
+        }
         : null),
       description: l.description || '',
       hsnCode: l.hsnCode || item?.hsnCode || '',
-      quantity: l.quantity,
+      quantity,
+      rate,
+      amount,
       unit: l.unit || 'Nos',
     }
   })
@@ -273,14 +328,20 @@ async function save() {
       notes: form.notes,
       lines: form.lines
         .filter((l) => l.itemId || l.description?.trim() || l.itemName?.trim())
-        .map((l) => ({
-          itemId: l.itemId || null,
-          itemName: l.itemName || l.itemOption?.description || '',
-          description: (l.description || l.itemName || l.itemOption?.description || '').trim(),
-          hsnCode: l.hsnCode || l.itemOption?.hsnCode || '',
-          quantity: Number(l.quantity) || 0,
-          unit: l.unit || 'Nos',
-        })),
+        .map((l) => {
+          const quantity = Number(l.quantity) || 0
+          const rate = Number(l.rate) || 0
+          return {
+            itemId: l.itemId || null,
+            itemName: l.itemName || l.itemOption?.description || '',
+            description: (l.description || l.itemName || l.itemOption?.description || '').trim(),
+            hsnCode: l.hsnCode || l.itemOption?.hsnCode || '',
+            quantity,
+            rate,
+            amount: Math.round(quantity * rate * 100) / 100,
+            unit: l.unit || 'Nos',
+          }
+        }),
     }
     if (!payload.company) throw new Error('Company is required')
     if (!payload.customer || !payload.date) throw new Error('Customer and date are required')

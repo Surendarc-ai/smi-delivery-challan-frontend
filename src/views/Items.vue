@@ -20,6 +20,7 @@
           <th>Description</th>
           <th>HSN Code</th>
           <th>Unit</th>
+          <th>Rate</th>
           <th></th>
         </tr>
       </thead>
@@ -28,6 +29,7 @@
           <td>{{ item.description }}</td>
           <td>{{ item.hsnCode || '—' }}</td>
           <td>{{ item.unit }}</td>
+          <td>{{ formatRate(item.rate) }}</td>
           <td class="actions">
             <button type="button" class="btn secondary" @click="openForm(item)">Edit</button>
             <button type="button" class="btn danger" @click="remove(item._id)">Delete</button>
@@ -58,6 +60,10 @@
           <label class="label">Unit</label>
           <input v-model="form.unit" class="input" placeholder="Nos" />
         </div>
+        <div class="field">
+          <label class="label">Rate</label>
+          <input v-model="form.rate" type="number" min="0" step="0.01" class="input" placeholder="0" />
+        </div>
       </div>
       <p v-if="formError" class="error mb-3">{{ formError }}</p>
       <div class="actions">
@@ -87,10 +93,16 @@ const loading = ref(false)
 const total = ref(0)
 const hasMore = ref(true)
 const sentinel = ref(null)
-const form = reactive({ description: '', hsnCode: '', unit: 'Nos' })
+const form = reactive({ description: '', hsnCode: '', unit: 'Nos', rate: '' })
 
 let searchTimer = null
 let observer = null
+
+function formatRate(rate) {
+  const n = Number(rate)
+  if (!Number.isFinite(n) || n === 0) return '—'
+  return Number.isInteger(n) ? String(n) : n.toFixed(2)
+}
 
 async function loadPage({ reset = false } = {}) {
   if (loading.value) return
@@ -127,6 +139,7 @@ function openForm(item = null) {
   form.description = item?.description || ''
   form.hsnCode = item?.hsnCode || ''
   form.unit = item?.unit || 'Nos'
+  form.rate = item?.rate != null && item.rate !== '' ? item.rate : ''
   formError.value = ''
   showForm.value = true
 }
@@ -139,10 +152,16 @@ async function save() {
   saving.value = true
   formError.value = ''
   try {
+    const payload = {
+      description: form.description,
+      hsnCode: form.hsnCode,
+      unit: form.unit,
+      rate: Number(form.rate) || 0,
+    }
     if (editingId.value) {
-      await request(`/api/items/${editingId.value}`, { method: 'PUT', body: JSON.stringify(form) })
+      await request(`/api/items/${editingId.value}`, { method: 'PUT', body: JSON.stringify(payload) })
     } else {
-      await request('/api/items', { method: 'POST', body: JSON.stringify(form) })
+      await request('/api/items', { method: 'POST', body: JSON.stringify(payload) })
     }
     showForm.value = false
     hasMore.value = true

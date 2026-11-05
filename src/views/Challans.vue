@@ -1,56 +1,101 @@
 <template>
-  <div class="card">
+  <div class="card max-w-full overflow-hidden !p-4 md:!p-6">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-      <h1 class="mb-0">Delivery Challans</h1>
+      <h1 class="mb-0 text-xl md:text-2xl">Delivery Challans</h1>
       <p v-if="total" class="empty m-0">Showing {{ challans.length }} of {{ total }}</p>
     </div>
-    <div class="toolbar">
+    <div class="toolbar flex-col sm:flex-row items-stretch sm:items-center">
       <input
         v-model="search"
-        class="input flex-1"
+        class="input w-full min-w-0 flex-1"
         placeholder="Search challan no / DC no / GSTIN..."
         @input="onSearchInput"
       />
-      <router-link class="btn" to="/challans/new">+ New Challan</router-link>
+      <router-link class="btn w-full sm:w-auto justify-center" to="/challans/new">+ New Challan</router-link>
     </div>
     <p v-if="error" class="error">{{ error }}</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Company</th>
-          <th>No.</th>
-          <th>Date</th>
-          <th>Customer</th>
-          <th>Lines</th>
-          <th>Billed</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="c in challans" :key="c._id">
-          <td>{{ c.company?.code || '—' }}</td>
-          <td>{{ formatChallanNo(c.company?.code, c.challanNo) }}</td>
-          <td>{{ formatDate(c.date) }}</td>
-          <td>{{ c.customer?.name || '—' }}</td>
-          <td>{{ c.lines?.length || 0 }}</td>
-          <td>
+
+    <!-- Mobile cards -->
+    <div class="md:hidden space-y-3">
+      <article
+        v-for="c in challans"
+        :key="c._id"
+        class="rounded-lg border border-slate-200 bg-slate-50/80 p-3"
+      >
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div class="min-w-0">
+            <p class="m-0 font-semibold text-slate-800 break-all">
+              {{ formatChallanNo(c.company?.code, c.challanNo) }}
+            </p>
+            <p class="m-0 mt-0.5 text-xs text-slate-500">
+              {{ c.company?.code || '—' }} · {{ formatDate(c.date) }}
+            </p>
+          </div>
+          <label class="shrink-0 flex items-center gap-1.5 text-xs text-slate-600">
             <input
               type="checkbox"
-              class="align-middle"
+              class="size-4"
               :checked="Boolean(c.billed)"
               :disabled="savingBilledId === c._id"
               :aria-label="`Mark challan ${formatChallanNo(c.company?.code, c.challanNo)} billed`"
               @change="toggleBilled(c, $event)"
             />
-          </td>
-          <td class="actions">
-            <button type="button" class="btn secondary" @click="download(c)">View PDF</button>
-            <router-link class="btn secondary" :to="`/challans/${c._id}`">Edit</router-link>
-            <button type="button" class="btn danger" @click="remove(c._id)">Delete</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            Billed
+          </label>
+        </div>
+        <p class="m-0 mb-3 text-sm text-slate-700 break-words">
+          {{ c.customer?.name || '—' }}
+          <span class="text-slate-400"> · {{ c.lines?.length || 0 }} lines</span>
+        </p>
+        <div class="actions">
+          <button type="button" class="btn secondary flex-1 justify-center" @click="download(c)">View PDF</button>
+          <router-link class="btn secondary flex-1 justify-center" :to="`/challans/${c._id}`">Edit</router-link>
+          <button type="button" class="btn danger" @click="remove(c._id)">Delete</button>
+        </div>
+      </article>
+    </div>
+
+    <!-- Desktop table -->
+    <div class="hidden md:block overflow-x-auto -mx-1 px-1">
+      <table class="min-w-[720px]">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>No.</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Lines</th>
+            <th>Billed</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="c in challans" :key="c._id">
+            <td>{{ c.company?.code || '—' }}</td>
+            <td>{{ formatChallanNo(c.company?.code, c.challanNo) }}</td>
+            <td>{{ formatDate(c.date) }}</td>
+            <td class="max-w-[240px] break-words">{{ c.customer?.name || '—' }}</td>
+            <td>{{ c.lines?.length || 0 }}</td>
+            <td>
+              <input
+                type="checkbox"
+                class="align-middle"
+                :checked="Boolean(c.billed)"
+                :disabled="savingBilledId === c._id"
+                :aria-label="`Mark challan ${formatChallanNo(c.company?.code, c.challanNo)} billed`"
+                @change="toggleBilled(c, $event)"
+              />
+            </td>
+            <td class="actions">
+              <button type="button" class="btn secondary" @click="download(c)">View PDF</button>
+              <router-link class="btn secondary" :to="`/challans/${c._id}`">Edit</router-link>
+              <button type="button" class="btn danger" @click="remove(c._id)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <p v-if="!challans.length && !loading" class="empty">No challans yet.</p>
     <p v-if="loading" class="empty mt-3">Loading…</p>
     <div ref="sentinel" class="h-4" aria-hidden="true" />
